@@ -596,7 +596,7 @@ def conv_backward_naive(dout, cache):
                     )
 
     if pad > 0:
-        dx = dx_padded[:, :, pad:-pad, pad:-pad]
+        dx = dx_padded[:, :, pad : pad + H, pad : pad + W]
     else:
         dx = dx_padded
     ###########################################################################
