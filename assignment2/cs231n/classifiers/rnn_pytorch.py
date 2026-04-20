@@ -138,7 +138,14 @@ class CaptioningRNN:
         #                                                                          #
         # You also don't have to implement the backward pass.                      #
         ############################################################################
-        # 
+        h0 = affine_forward(features, W_proj, b_proj)
+        word_vectors = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == "rnn":
+            h = rnn_forward(word_vectors, h0, Wx, Wh, b)
+        else:
+            h = lstm_forward(word_vectors, h0, Wx, Wh, b)
+        scores = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss = temporal_softmax_loss(scores, captions_out, mask)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -202,7 +209,19 @@ class CaptioningRNN:
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        # 
+        prev_h = affine_forward(features, W_proj, b_proj)
+        prev_c = torch.zeros_like(prev_h) if self.cell_type == "lstm" else None
+        prev_words = torch.full((N,), self._start, dtype=torch.long, device=features.device)
+
+        for t in range(max_length):
+            word_vec = W_embed[prev_words]
+            if self.cell_type == "rnn":
+                prev_h = rnn_step_forward(word_vec, prev_h, Wx, Wh, b)
+            else:
+                prev_h, prev_c = lstm_step_forward(word_vec, prev_h, prev_c, Wx, Wh, b)
+            scores = affine_forward(prev_h, W_vocab, b_vocab)
+            prev_words = torch.argmax(scores, dim=1)
+            captions[:, t] = prev_words
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
